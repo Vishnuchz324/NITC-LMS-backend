@@ -9,5 +9,8 @@
 3. create a virtual enviornment in the directory `python -m venv venv`
 4. install all the dependencies to the virtual enviornment from the requirements file `pip install -r requirements.txt`
 5. setup the flask enviornmnet variables (_steps illustrated fot windows_)
-   `$env:FLASK_APP="api"`
-   `$env:FLASK_ENV="development"`
+   ```
+   $env:FLASK_APP="api"
+   $env:FLASK_ENV="development"
+   ```
+6. start the application using `flask run` opens up by default in _localhost:5000_
