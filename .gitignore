@@ -1,3 +1,6 @@
 venv
 vscode
 .gitignore
+.env
+api/__pycache__/__init__.cpython-39.pyc
+api/__pycache__/hello.py
