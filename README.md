@@ -15,3 +15,4 @@
    $env:FLASK_ENV="development"
    ```
 7. start the application using `flask run` opens up by default in _localhost:5000_
+8. API documentation available at _localhost:5000_ or <a href="https://documenter.getpostman.com/view/15324195/UVCCfjQL">here</a>

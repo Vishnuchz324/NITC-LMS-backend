@@ -4,8 +4,6 @@ import click
 from flask.cli import with_appcontext
 from flask import current_app, g
 from psycopg2 import extras
-from dotenv import load_dotenv
-load_dotenv()
 
 
 def init_app(app):
@@ -21,13 +19,14 @@ def init_db():
     with current_app.open_resource(schema_path) as f:
         cur.execute(f.read().decode('utf8'))
     return cur.fetchone()['version']
+
+
 @click.command("init-db")
 @with_appcontext
 def init_db_command():
     db_version = init_db()
     click.echo("Database Initialized. DB version:")
     click.echo("    {0}".format(db_version))
-
 
 
 # seed the databse with dummy data using the script sql/seed.sql
@@ -42,7 +41,6 @@ def init_db_command():
 # def seed_db_command():
 #     seed_db()
 #     click.echo("Seeded the database.")
-
 
 def get_db():
     if "db" not in g:
