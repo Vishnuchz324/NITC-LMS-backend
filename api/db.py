@@ -29,19 +29,6 @@ def init_db_command():
     click.echo("    {0}".format(db_version))
 
 
-# seed the databse with dummy data using the script sql/seed.sql
-# def seed_db():
-#     """Helper for seed_db_command. Executes seed.sql"""
-#     db, cur = get_db()
-#     seed_path = os.path.join(os.getcwd(), 'sql/seed.sql')
-#     with current_app.open_resource(seed_path) as f:
-#         cur.execute(f.read())
-# @click.command("seed-db")
-# @with_appcontext
-# def seed_db_command():
-#     seed_db()
-#     click.echo("Seeded the database.")
-
 def get_db():
     if "db" not in g:
         DB_HOST = os.getenv('DB_HOST')

@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 import jwt
 import os
 JWT_SECRET = os.getenv('JWT_SECRET')
@@ -9,6 +9,14 @@ def generate_token(userId, isAdmin):
     encoded_jwt = jwt.encode(
         {"userID": str(userId), "isAdmin": isAdmin}, JWT_SECRET, algorithm="HS256")
     return encoded_jwt
+
+
+def add_app_context(f):
+    @wraps(f)
+    def create_app_context(*args, **kwargs):
+        with current_app.app_context():
+            return f(*args, **kwargs)
+    return create_app_context
 
 
 def verify_token(f):

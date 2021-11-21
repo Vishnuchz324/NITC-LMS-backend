@@ -2,7 +2,7 @@ from flask import Flask, blueprints, redirect
 from dotenv import load_dotenv
 
 from . import db
-from . import user
+from . import auth
 
 
 def create_app():
@@ -14,6 +14,6 @@ def create_app():
     def get_postman_docs():
         return redirect("https://documenter.getpostman.com/view/15324195/UVCCfjQL")
 
-    app.register_blueprint(user.bp)
+    app.register_blueprint(auth.bp)
 
     return app
