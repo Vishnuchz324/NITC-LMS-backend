@@ -53,6 +53,7 @@ def verify_admin_authorization(f):
     @wraps(f)
     @verify_token
     def admin_authorization(*args, **kwargs):
+        print(request.user)
         if not request.user["isAdmin"]:
             return jsonify({"message": "you are not an admin"}), 400
         return f(*args, **kwargs)

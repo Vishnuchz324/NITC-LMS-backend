@@ -10,8 +10,8 @@ def validate_register_user(body):
     # body validation
     # {
     #     "userID"   : - required
-    #                  - 6 characters
-    #                  - unique
+    #                  - 9 characters
+    #                  - unique [ also not a librarian ]
     #     "userName" : - required
     #     "phoneNo"    : - required
     #                  - 10 to 12 characters
