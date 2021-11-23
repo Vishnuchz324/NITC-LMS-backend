@@ -1,6 +1,5 @@
 venv
 .vscode/
 .gitignore
-.env
 **/__pycache__/
 .pytest_cache
