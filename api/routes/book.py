@@ -12,7 +12,7 @@ def add_books():
     db, cursor = get_db()
     body = request.json
     error = None
-    required = ['ISBN', 'bookName', 'author', 'publisher']
+    required = ['ISBN', 'bookName', 'authors','tags','publisher']
     for key in required:
         if key not in body.keys():
             error = f"{key} is required"

@@ -2,9 +2,9 @@ from flask import Flask, blueprints, redirect
 from dotenv import load_dotenv
 
 from . import db
-from . import auth
-from . import book
-from . import admin
+from api.routes import auth
+from api.routes import book
+from api.routes import admin
 
 
 def create_app():
