@@ -1,4 +1,4 @@
-import os
+from os import environ
 import psycopg2
 import click
 from flask.cli import with_appcontext
@@ -31,9 +31,9 @@ def init_db_command():
 
 def get_db():
     if "db" not in g:
-        enviornment = os.environ['ENV']
-        DB_URL = os.getenv(
-            'DATABASE_URL_DEV') if enviornment == "developemnt" else os.getenv('DATABASE_URL')
+        enviornment = environ.get('ENV')
+        DB_URL = environ.get(
+            'DATABASE_URL_DEV') if enviornment == "developemnt" else environ.get('DATABASE_URL')
         g.db = psycopg2.connect(DATABASE_URL)
         g.db.autocommit = True
         g.cursor = g.db.cursor(cursor_factory=extras.DictCursor)

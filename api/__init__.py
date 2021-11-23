@@ -1,5 +1,6 @@
 from flask import Flask, blueprints, redirect
 from dotenv import load_dotenv
+from os import environ
 
 from . import db
 from api.routes import auth
@@ -13,8 +14,10 @@ def create_app():
     db.init_app(app)
 
     @app.route("/", methods=['GET'])
-    def get_postman_docs():
-        return redirect("https://documenter.getpostman.com/view/15324195/UVCCfjQL")
+    def demo():
+        return str(environ.get('DATABASE_URL'))
+    # def get_postman_docs():
+    #     return redirect("https://documenter.getpostman.com/view/15324195/UVCCfjQL")
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(book.bp)
