@@ -34,7 +34,7 @@ def get_db():
         enviornment = environ.get('ENV')
         DB_URL = environ.get(
             'DATABASE_URL_DEV') if enviornment == "developemnt" else environ.get('DATABASE_URL')
-        g.db = psycopg2.connect(DATABASE_URL)
+        g.db = psycopg2.connect(DB_URL)
         g.db.autocommit = True
         g.cursor = g.db.cursor(cursor_factory=extras.DictCursor)
     return g.db, g.cursor
