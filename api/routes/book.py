@@ -8,6 +8,7 @@ bp = Blueprint('book', __name__, url_prefix='/api/book')
 
 
 @bp.route("/register", methods=["POST"])
+@verify_admin_authorization
 def add_books():
     db, cursor = get_db()
     body = request.json
@@ -103,13 +104,44 @@ def add_books():
 def get_all_books():
     db, cursor = get_db()
     try:
-        cursor.execute("SELECT * FROM book_details")
+        cursor.execute("SELECT ISBN FROM book_details")
         books = []
-        for book in cursor.fetchall():
-            books.append(dict(book))
+        for isbn_list in cursor.fetchall():
+            isbn = isbn_list[0]
+            book, error = get_book(isbn)
+            if(error is None):
+                books.append(dict(book))
+            else:
+                raise Exception(error)
         return jsonify({"data": books}), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 400
+
+
+@bp.route("/tags", methods=["GET"])
+def get_tags():
+    db, cursor = get_db()
+    tags = []
+    try:
+        cursor.execute("SELECT tag_name FROM tags")
+        for tag_list in cursor.fetchall():
+            tags.append(tag_list[0])
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    return jsonify({"tags": tags}), 200
+
+
+@bp.route("/authors", methods=["GET"])
+def get_authors():
+    db, cursor = get_db()
+    authors = []
+    try:
+        cursor.execute("SELECT author_name FROM author")
+        for author_list in cursor.fetchall():
+            authors.append(author_list[0])
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    return jsonify({"authors": authors}), 200
 
 
 def get_book(isbn):
@@ -200,4 +232,6 @@ def search_books():
         book, error = get_book(isbn)
         if(not error):
             books.append(book)
+        else:
+            return jsonify({"message": str(error)}), 400
     return jsonify({"data": books}), 200
