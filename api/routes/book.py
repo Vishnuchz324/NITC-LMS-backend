@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 
 from api.db import get_db
 from api.decorator import verify_admin_authorization, verify_authorization, generate_token
@@ -99,20 +99,105 @@ def add_books():
     return jsonify({"message": error}), 400
 
 
-@bp.route("/search", methods=["GET"])
-def get_all_books_of_author():
-    author = request.args.get('author')
+@bp.route("/", methods=["GET"])
+def get_all_books():
     db, cursor = get_db()
     try:
+        cursor.execute("SELECT * FROM book_details")
         books = []
-        cursor.execute(
-            """SELECT book_name,publisher,book_details.ISBN FROM book_details ,author ,books_authors
-            WHERE books_authors.author_ID = author.author_ID
-            AND books_authors.ISBN = book_details.ISBN
-            AND author.author_name = %s""", (author,))
-
         for book in cursor.fetchall():
             books.append(dict(book))
         return jsonify({"data": books}), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 400
+
+
+def get_book(isbn):
+    db, cursor = get_db()
+    book = None
+    error = None
+    try:
+        cursor.execute("SELECT * FROM book_details WHERE ISBN=%s", (isbn,))
+        book = dict(cursor.fetchone())
+        book['authors'] = []
+        book['tags'] = []
+        cursor.execute(
+            "SELECT tag_name FROM tags NATURAL JOIN books_tags WHERE ISBN=%s", (isbn,))
+        for tag in cursor.fetchall():
+            book['tags'].append(tag[0])
+        cursor.execute(
+            "SELECT author_name FROM author NATURAL JOIN books_authors WHERE ISBN=%s", (isbn,))
+        for author in cursor.fetchall():
+            book['authors'].append(author[0])
+    except Exception as e:
+        error = e
+    return book, error
+
+
+@bp.route("/<isbn>", methods=["GET"])
+def get_book_from_isbn(isbn):
+    book, error = get_book(isbn)
+    if error:
+        return jsonify({"message": str(error)}), 400
+    else:
+        return jsonify({"data": book}), 200
+
+
+@bp.route("/search", methods=["GET"])
+def search_books():
+    body = request.json
+    required = ["authors", "tags"]
+    for key in required:
+        if key not in body.keys():
+            return jsonify({"message": f"{key} is a required key"}), 400
+    authors = tuple(body['authors'])
+    tags = tuple(body['tags'])
+    db, cursor = get_db()
+    book_ids = []
+    books = []
+    if(len(authors) == 0 and len(tags) == 0):
+        return jsonify({"data": books}), 200
+    if(len(authors) > 0 and len(tags) > 0):
+        try:
+            cursor.execute(
+                """SELECT book_details.ISBN FROM book_details WHERE
+                book_details.ISBN IN (SELECT books_tags.ISBN FROM (books_tags NATURAL JOIN tags)
+                WHERE tags.tag_name IN %s)
+                AND book_details.ISBN IN (SELECT books_authors.ISBN FROM (books_authors NATURAL JOIN author)
+                WHERE author.author_name IN %s)""", (tags, authors))
+            for isbn_list in cursor.fetchall():
+                isbn = isbn_list[0]
+                if isbn not in book_ids:
+                    book_ids.append(isbn)
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+    elif(len(authors) > 0):
+        try:
+            cursor.execute(
+                """SELECT book_details.ISBN FROM book_details WHERE
+                book_details.ISBN IN (SELECT books_authors.ISBN FROM (books_authors NATURAL JOIN author)
+                WHERE author.author_name IN %s)""", (authors,))
+            for isbn_list in cursor.fetchall():
+                isbn = isbn_list[0]
+                if isbn not in book_ids:
+                    book_ids.append(isbn)
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+    elif(len(tags) > 0):
+        try:
+            cursor.execute(
+                """SELECT book_details.ISBN FROM book_details WHERE
+                book_details.ISBN IN (SELECT books_tags.ISBN FROM (books_tags NATURAL JOIN tags)
+                WHERE tags.tag_name IN %s)""", (tags,))
+
+            for isbn_list in cursor.fetchall():
+                isbn = isbn_list[0]
+                if isbn not in book_ids:
+                    book_ids.append(isbn)
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+    for isbn in book_ids:
+        book, error = get_book(isbn)
+        if(not error):
+            books.append(book)
+    return jsonify({"data": books}), 200
