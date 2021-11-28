@@ -8,11 +8,19 @@ from api.decorator import verify_admin_authorization, verify_authorization, gene
 bp = Blueprint('book', __name__, url_prefix='/api/book')
 
 
+@bp.route("/fine/<user_id>", methods=["GET"])
+@verify_admin_authorization
+def fine_user(user_ID):
+    db, cursor = get_db()
+    # the user is available in the request due to the decorator
+    admin_ID = request.user["userID"]
+    # TODO
+
+
 @bp.route("/add/<isbn>", methods=["GET"])
 @verify_admin_authorization
 def add_book(isbn, nums=1):
     db, cursor = get_db()
-    print("came here")
     if (request.args.get("nums")):
         nums = int(request.args.get("nums"))
     admin = request.user["userID"]

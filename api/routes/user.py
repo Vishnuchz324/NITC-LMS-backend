@@ -7,6 +7,20 @@ from api.decorator import verify_admin_authorization, verify_authorization, gene
 bp = Blueprint('user', __name__, url_prefix='/api/user')
 
 
+@bp.route("/id/request", methods=["POST"])
+def post_book_request():
+    db, cursor = get_db()
+    body = request.json
+    # TODO
+    pass
+
+
+@bp.route("/<id>", methods=["PATCH"])
+def update_user_info():
+    # TODO
+    pass
+
+
 @bp.route("/<id>/borrow/<isbn>", methods=["GET"])
 @verify_authorization
 def borrow_request(id, isbn):
@@ -57,8 +71,3 @@ def get_user(id):
             user.update(data)
             return jsonify({"user": user}), 200
     return jsonify({"message": error}), 400
-
-
-@bp.route("/<id>", methods=["PATCH"])
-def update_user_info():
-    pass
