@@ -33,9 +33,8 @@ def init_db_command():
 def get_db():
     if "db" not in g:
         enviornment = environ.get('ENV')
-        # DB_URL = environ.get(
-        #     'DATABASE_URL_DEV') if enviornment == "developemnt" else environ.get('DATABASE_URL')
-        DB_URL = environ.get('DATABASE_URL_DEV')
+        DB_URL = environ.get('DATABASE_URL')
+        # DB_URL = environ.get('DATABASE_URL_DEV')
         g.db = psycopg2.connect(DB_URL)
         g.db.autocommit = True
         g.cursor = g.db.cursor(cursor_factory=extras.DictCursor)

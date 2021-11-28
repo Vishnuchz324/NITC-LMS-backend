@@ -20,7 +20,7 @@ mem_name VARCHAR(35),
 pwd TEXT,
 phone CHAR(10),
 email VARCHAR(45),
-dept VARCHAR(5),
+dept TEXT,
 PRIMARY KEY(user_ID)
 );
 
@@ -35,7 +35,7 @@ FOREIGN KEY(employee_ID) REFERENCES members(user_ID)
 CREATE TABLE student(
 roll_No CHAR(9),
 validity DATE,
-programme VARCHAR(6),
+programme TEXT,
 PRIMARY KEY(roll_No),
 FOREIGN KEY(roll_No) REFERENCES members(user_ID));
 

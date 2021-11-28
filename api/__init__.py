@@ -1,4 +1,5 @@
 from flask import Flask, blueprints, redirect
+from flask_cors import CORS
 from dotenv import load_dotenv
 
 from . import db
@@ -11,6 +12,7 @@ from api.routes import user
 def create_app():
     load_dotenv()
     app = Flask(__name__)
+    CORS(app)
     db.init_app(app)
 
     @app.route("/", methods=['GET'])
