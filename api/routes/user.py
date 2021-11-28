@@ -7,6 +7,24 @@ from api.decorator import verify_admin_authorization, verify_authorization, gene
 bp = Blueprint('user', __name__, url_prefix='/api/user')
 
 
+@bp.route("/<id>/borrow/<isbn>", methods=["GET"])
+@verify_authorization
+def borrow_request(id, isbn):
+    db, cursor = get_db()
+    cursor.execute("SELECT * FROM book_details WHERE ISBN=%s", (isbn,))
+    error = None
+    if not cursor.fetchall():
+        error = "book not registered"
+    if error is None:
+        try:
+            cursor.execute(
+                "INSERT INTO borrowal_request(user_ID,ISBN) VALUES(%s,%s)", (id, isbn))
+            return jsonify({"message": f"succesfully added borrowal request for {isbn}"}), 200
+        except Exception as e:
+            error = str(e)
+    return jsonify({"message": error}), 400
+
+
 @bp.route("/<id>", methods=["GET"])
 @verify_authorization
 def get_user(id):

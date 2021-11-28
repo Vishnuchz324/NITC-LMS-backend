@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, make_response
+from datetime import date
 
 from api.db import get_db
 from api.decorator import verify_admin_authorization, verify_authorization, generate_token
@@ -7,9 +8,26 @@ from api.decorator import verify_admin_authorization, verify_authorization, gene
 bp = Blueprint('book', __name__, url_prefix='/api/book')
 
 
+@bp.route("/add/<isbn>", methods=["GET"])
+@verify_admin_authorization
+def add_book(isbn, nums=1):
+    db, cursor = get_db()
+    print("came here")
+    if (request.args.get("nums")):
+        nums = int(request.args.get("nums"))
+    admin = request.user["userID"]
+    try:
+        for i in range(nums):
+            cursor.execute(
+                "INSERT INTO book(ISBN,admin_ID) VALUES(%s,%s)", (isbn, admin))
+        return jsonify({"message": f"{nums} number of books added"}), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+
+
 @bp.route("/register", methods=["POST"])
 @verify_admin_authorization
-def add_books():
+def register_books():
     db, cursor = get_db()
     body = request.json
     error = None
@@ -94,8 +112,11 @@ def add_books():
             'SELECT author_name FROM author NATURAL JOIN books_authors WHERE books_authors.ISBN=%s', (ISBN))
         for author in cursor.fetchall():
             book['authors'].append(author[0])
-
-        return jsonify({"message": "book succesfully added", "data": book}), 200
+        nums = 1
+        if("nums" in body.keys()):
+            nums = body["nums"]
+        add_book(ISBN, nums)
+        return jsonify({"message": f"book succesfully added {nums} copies", "data": book}), 200
 
     return jsonify({"message": error}), 400
 
@@ -161,6 +182,14 @@ def get_book(isbn):
             "SELECT author_name FROM author NATURAL JOIN books_authors WHERE ISBN=%s", (isbn,))
         for author in cursor.fetchall():
             book['authors'].append(author[0])
+        cursor.execute(
+            "SELECT books.status,COUNT(*) FROM (SELECT * FROM book WHERE ISBN=%s) as books GROUP BY status", (isbn,))
+        availability = {}
+        lookup = {"AVAILABLE": "available",
+                  "BAD CONDITION": "bad_condition", "BORROWED": "borrowed"}
+        for [key, value] in cursor.fetchall():
+            availability[lookup[key]] = value
+        book['availability'] = availability
     except Exception as e:
         error = e
     return book, error

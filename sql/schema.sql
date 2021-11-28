@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS librarian CASCADE;
 DROP TABLE IF EXISTS members CASCADE;
 DROP TABLE IF EXISTS tags CASCADE;
 DROP TABLE IF EXISTS author CASCADE;
+DROP TABLE IF EXISTS borrowal_request CASCADE;
 
 CREATE TABLE members(
 user_ID CHAR(9),
@@ -63,7 +64,7 @@ CREATE TABLE request(
 request_ID serial,
 user_ID CHAR(9),
 book_name VARCHAR(35),
-req_date DATE,
+req_date timestamp default current_timestamp,
 req_type BOOLEAN,
 PRIMARY KEY(request_ID),
 FOREIGN KEY(user_ID) REFERENCES members(user_ID)
@@ -107,14 +108,24 @@ FOREIGN KEY (ISBN) REFERENCES book_details(ISBN)
 
 
 CREATE TABLE book(
-book_number INTEGER,
-ISBN CHAR(13) UNIQUE,
-status BOOLEAN,
+book_number serial,
+ISBN CHAR(13),
+status VARCHAR(20) DEFAULT 'AVAILABLE',
 admin_ID CHAR(9),
-arrival_date DATE,
+arrival_date timestamp DEFAULT current_timestamp,
 PRIMARY KEY (book_number),
 FOREIGN KEY (ISBN) REFERENCES book_details(ISBN),
 FOREIGN KEY(admin_ID) REFERENCES librarian(employee_ID)
+);
+
+CREATE TABLE borrowal_request(
+    request_ID serial,
+    user_ID CHAR(9),
+    ISBN CHAR(13),
+    req_date timestamp DEFAULT current_timestamp,
+    PRIMARY KEY(request_ID),
+    FOREIGN KEY(user_ID) REFERENCES members(user_ID),
+    FOREIGN KEY (ISBN) REFERENCES book_details(ISBN)
 );
 
 CREATE TABLE borrowal(

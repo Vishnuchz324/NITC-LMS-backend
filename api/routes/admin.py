@@ -7,6 +7,21 @@ from api.decorator import verify_admin_authorization, verify_authorization, gene
 bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 
+@bp.route("/requests/borrow", methods=["GET"])
+@verify_admin_authorization
+def get_borrow_requests():
+    db, cursor = get_db()
+    try:
+        cursor.execute("""SELECT br.request_ID as id,m.mem_name as user,bd.book_name as book,br.req_date FROM borrowal_request br,members m,book_details bd
+                        WHERE br.user_ID = m.user_ID AND br.ISBN = bd.ISBN ORDER BY br.req_date """)
+    except Exception as e:
+        jsonify({"message": str(e)}), 400
+    requests = []
+    for data in cursor.fetchall():
+        requests.append(dict(data))
+    return jsonify({"requests": requests}), 200
+
+
 @bp.route('/users', methods=['GET'])
 @verify_admin_authorization
 def get_all_users():
