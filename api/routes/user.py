@@ -2,97 +2,171 @@ from flask import Blueprint, request, jsonify, make_response
 
 from api.db import get_db
 from api.routes.book import get_book
-from api.decorator import verify_admin_authorization, verify_authorization, generate_token
+from api.decorator import (
+    verify_admin_authorization,
+    verify_authorization,
+    generate_token,
+)
 
 
-bp = Blueprint('user', __name__, url_prefix='/api/user')
+bp = Blueprint("user", __name__, url_prefix="/api/user")
+
+# ROUTES
+# [GET]    "/<id>"               get uset data
+# [PATCH]  "/<id>"               update uset data
+# [GET]    "/<id>/borrow?isbn="  put a borrow request
+# [GET]    "/<id>/borrowed"      view all borrowed books
+# [POST]   "/<id>/request"       request a new book
 
 
-@bp.route("/id/request", methods=["POST"])
-def post_book_request():
+# get the user data
+# passed on <id> as a dynamic parameter and verified using jwt token
+@bp.route("/<id>", methods=["GET"])
+@verify_authorization
+def get_user(id):
     db, cursor = get_db()
-    body = request.json
-    # TODO
-    pass
+    error = None
+    # fetch the user data from the members table if exists
+    cursor.execute("SELECT * FROM members WHERE user_ID = %s", (id,))
+    user = dict(cursor.fetchone())
+    # deleting unwanted keys that neednt be shared with the client
+    del user["user_id"]
+    del user["pwd"]
+    # raise an error if there is no entry for the particular userID
+    if user is None:
+        error = "user not registered"
+    if error is None:
+        # check if the member is a student
+        # fetch the student data from the student table assuming member is a student
+        cursor.execute("SELECT * FROM student WHERE roll_No = %s", (id,))
+        data = cursor.fetchone()
+        role = "student"
+        # executes if the member not a student
+        if data is None:
+            try:
+                # check if the member is a staff
+                # fetch the staff data from the staff table assuming member is a staff
+                cursor.execute("SELECT * FROM staff WHERE employee_ID = %s", (id,))
+                data = cursor.fetchone()
+                role = "staff"
+            except Exception as e:
+                error = e
+        # eerror is raised if the userID is invalid
+        if data is None:
+            error = "the user id entered is incorrect"
+        elif error is None:
+            # collected member data and role is assigned student or staff
+            data = dict(data)
+            data["role"] = role
+            # concatenate the member data with the student or staff data collected
+            user.update(data)
+            return jsonify({"user": user}), 200
+    return jsonify({"message": error}), 400
 
 
+# TODO
+# update the user data
+# passed on <id> as a dynamic parameter and verified using jwt token
 @bp.route("/<id>", methods=["PATCH"])
+@verify_authorization
 def update_user_info():
-    # TODO
-    pass
+    return "hello"
 
 
+# make a borrow request for a book
+# passed on <id> as a dynamic parameter and verified using jwt token
+@bp.route("/<id>/borrow", methods=["GET"])
+@verify_authorization
+def borrow_request(id, isbn):
+    db, cursor = get_db()
+    error = None
+    # checks if the isbn id of the book to be borrowed is given
+    isbn = request.args.get("isbn")
+    # if no isbn then error is raised
+    if isbn is None:
+        error = "book not specified"
+    else:
+        # verifies if the isbn is valid and is of a registered book
+        cursor.execute("SELECT * FROM book_details WHERE ISBN=%s", (isbn,))
+        if not cursor.fetchall():
+            error = "book not registered"
+    if error is None:
+        try:
+            # insert the instance to the borrowal_request table for admin to verify
+            cursor.execute(
+                "INSERT INTO borrowal_request(user_ID,ISBN) VALUES(%s,%s)", (id, isbn)
+            )
+            return (
+                jsonify({"message": f"succesfully added borrowal request for {isbn}"}),
+                200,
+            )
+        except Exception as e:
+            error = str(e)
+    return jsonify({"message": error}), 400
+
+
+# view all books borrowed by the user
+# passed on <id> as a dynamic parameter and verified using jwt token
 @bp.route("/<id>/borrowed", methods=["GET"])
 @verify_authorization
 def view_borrowed(id):
     db, cursor = get_db()
     books = []
     try:
-        cursor.execute(
-            "SELECT ISBN,renewed FROM borrowal WHERE user_ID = %s", (id,))
+        # fetch all those ISBN and number of times renewed belonging to the given userID
+        cursor.execute("SELECT ISBN,renewed FROM borrowal WHERE user_ID = %s", (id,))
     except Exception as e:
         return jsonify({"message": error}), 400
+    # parsing the array of tyuples
     for data in cursor.fetchall():
         data = dict(data)
         isbn = data["isbn"]
         renewed = data["renewed"]
+        # fetch the details of the book corresponding to given isbn
         book, error = get_book(isbn)
-        if(not error):
+        if not error:
+            # add a new key renewed giving number of times the book was renewed
             book["renewed"] = renewed
-            del book['availability']
+            # deleting key values that needent beviewed by the clients
+            del book["availability"]
+            # collecting all the book details as an array of objects
             books.append(book)
         else:
             return jsonify({"message": str(error)}), 400
     return jsonify({"data": books}), 200
 
 
-@bp.route("/<id>/borrow/<isbn>", methods=["GET"])
+# make a request for a addition of a new book
+# passed on <id> as a dynamic parameter and verified using jwt token
+@bp.route("/<id>/request", methods=["POST"])
 @verify_authorization
-def borrow_request(id, isbn):
+def post_book_request(id):
     db, cursor = get_db()
-    cursor.execute("SELECT * FROM book_details WHERE ISBN=%s", (isbn,))
-    error = None
-    if not cursor.fetchall():
-        error = "book not registered"
-    if error is None:
-        try:
-            cursor.execute(
-                "INSERT INTO borrowal_request(user_ID,ISBN) VALUES(%s,%s)", (id, isbn))
-            return jsonify({"message": f"succesfully added borrowal request for {isbn}"}), 200
-        except Exception as e:
-            error = str(e)
-    return jsonify({"message": error}), 400
-
-
-@bp.route("/<id>", methods=["GET"])
-@verify_authorization
-def get_user(id):
-    db, cursor = get_db()
-    error = None
-    cursor.execute("SELECT * FROM members WHERE user_ID = %s", (id,))
-    user = dict(cursor.fetchone())
-    del user['user_id']
-    del user['pwd']
-    if(user is None):
-        error = "user not registered"
-    if(error is None):
+    body = request.json
+    required = ["bookName"]
+    # checks if the rquest body contains the name of book to be requested
+    for key in required:
+        if key not in body.keys():
+            return jsonify({"message": "book name is required"}), 400
+    book_name = body["bookName"]
+    try:
+        # verifies that the book requested is not already registed
+        cursor.execute("SELECT * FROM book_details WHERE book_name = %s", (book_name,))
+        # if book already registeed error is raised
+        if cursor.fetchone():
+            return jsonify({"message": "book already registered"}), 400
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    try:
+        # if the request is for a new book
+        # insert the instance to the request table for admin to view
         cursor.execute(
-            "SELECT * FROM student WHERE roll_No = %s", (id,))
-        data = cursor.fetchone()
-        role = "student"
-        if(data is None):
-            try:
-                cursor.execute(
-                    "SELECT * FROM staff WHERE employee_ID = %s", (id,))
-                data = cursor.fetchone()
-                role = "staff"
-            except Exception as e:
-                error = e
-        if(data is None):
-            error = "the user id entered is incorrect"
-        elif(error is None):
-            data = dict(data)
-            data["role"] = role
-            user.update(data)
-            return jsonify({"user": user}), 200
-    return jsonify({"message": error}), 400
+            "INSERT INTO request(user_ID,book_name) VALUES(%s,%s)",
+            (
+                id,
+                book_name,
+            ),
+        )
+        return jsonify({"message": "book request submitted"}), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400

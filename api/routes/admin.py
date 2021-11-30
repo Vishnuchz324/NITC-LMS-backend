@@ -22,7 +22,21 @@ def get_borrow_requests():
     return jsonify({"requests": requests}), 200
 
 
-@bp.route("/checkout/<request_id>", methods=["POST"])
+@bp.route("/borrowals", methods=["GET"])
+@verify_admin_authorization
+def get_all_borrowals():
+    db, cursor = get_db()
+    borrowals = []
+    try:
+        cursor.execute("SELECT * FROM borrowal NATURAL JOIN book_details")
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    for data in cursor.fetchall():
+        borrowals.append(dict(data))
+    return jsonify({"data": borrowals}), 200
+
+
+@bp.route("/checkout/<request_id>", methods=["GET"])
 @verify_admin_authorization
 def checkout(request_id):
     db, cursor = get_db()
@@ -33,7 +47,6 @@ def checkout(request_id):
         borrow_request = dict(cursor.fetchone())
     except Exception as e:
         return jsonify({"message": str(e)}), 400
-    print(borrow_request)
     user_id = borrow_request["user_id"]
     isbn = borrow_request["isbn"]
 
@@ -51,7 +64,7 @@ def checkout(request_id):
         renewed = 1
         # select a book from the books list to issue to the user
         cursor.execute(
-            """SELECT * FROM book WHERE ISBN=%s ORDER BY arrival_date LIMIT 1""", (isbn,))
+            """SELECT * FROM book WHERE ISBN=%s AND status=%s ORDER BY arrival_date LIMIT 1""", (isbn, "AVAILABLE"))
         book = cursor.fetchone()
         if not book:
             return jsonify({"message": "no copies available"}), 400
@@ -88,6 +101,32 @@ def checkout(request_id):
         return jsonify({"message": str(e)}), 400
 
     return jsonify({"message": "book succesfully checked out"}), 200
+
+
+@bp.route("/checkin/<borrowal_id>", methods=["GET"])
+@verify_admin_authorization
+def checkin(borrowal_id):
+    db, cursor = get_db()
+    try:
+        cursor.execute(
+            "SELECT * FROM borrowal WHERE issue_ID = %s", (borrowal_id,))
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    borrowal = dict(cursor.fetchone())
+    if borrowal:
+        try:
+            cursor.execute(
+                "DELETE FROM borrowal WHERE issue_ID = %s", (borrowal_id,))
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+        try:
+            book_number = borrowal["book_number"]
+            cursor.execute(
+                """UPDATE book SET status =%s WHERE book_number=%s""", (
+                    "AVAILABLE", book_number))
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+    return jsonify({"message": "book has been sucvesfully checked in "}), 200
 
 
 @bp.route('/users', methods=['GET'])

@@ -65,7 +65,6 @@ request_ID serial,
 user_ID CHAR(9),
 book_name VARCHAR(35),
 req_date timestamp default current_timestamp,
-req_type BOOLEAN,
 PRIMARY KEY(request_ID),
 FOREIGN KEY(user_ID) REFERENCES members(user_ID)
 );
