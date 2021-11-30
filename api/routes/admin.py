@@ -22,6 +22,74 @@ def get_borrow_requests():
     return jsonify({"requests": requests}), 200
 
 
+@bp.route("/checkout/<request_id>", methods=["POST"])
+@verify_admin_authorization
+def checkout(request_id):
+    db, cursor = get_db()
+    admin_id = request.user["userID"]
+    try:
+        cursor.execute(
+            "SELECT * FROM borrowal_request WHERE request_ID=%s", (request_id,))
+        borrow_request = dict(cursor.fetchone())
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    print(borrow_request)
+    user_id = borrow_request["user_id"]
+    isbn = borrow_request["isbn"]
+
+    # get the number of times the book have been renewed if taken previously
+    try:
+        cursor.execute(
+            """SELECT renewed FROM borrowal WHERE user_ID=%s AND ISBN = %s""", (user_id, isbn))
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    renewed = 0
+    previos_renewal = cursor.fetchone()
+    if(previos_renewal):
+        renewed = previos_renewal[0]
+    if(renewed == 0):
+        renewed = 1
+        # select a book from the books list to issue to the user
+        cursor.execute(
+            """SELECT * FROM book WHERE ISBN=%s ORDER BY arrival_date LIMIT 1""", (isbn,))
+        book = cursor.fetchone()
+        if not book:
+            return jsonify({"message": "no copies available"}), 400
+        else:
+            book_number = book["book_number"]
+
+            # insert the borrowal entry to the borrowal table
+            try:
+                cursor.execute(
+                    """INSERT INTO borrowal(user_ID,admin_ID,ISBN,book_number,renewed) VALUES(%s,%s,%s,%s,%s)""", (user_id, admin_id, isbn, book_number, renewed))
+            except Exception as e:
+                return jsonify({"message": str(e)}), 400
+
+            # update the status of the borrowed book
+            try:
+                cursor.execute(
+                    """UPDATE book SET status =%s WHERE book_number=%s""", (
+                        "BORROWED", book_number))
+            except Exception as e:
+                return jsonify({"message": str(e)}), 400
+    elif(renewed < 3):
+        renewed += 1
+        try:
+            cursor.execute(
+                """UPDATE borrowal SET renewed = %s WHERE user_ID=%s AND ISBN=%s""", (renewed, user_id, isbn))
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+
+    # delete the entry from pending requests
+    try:
+        cursor.execute(
+            """DELETE FROM borrowal_request WHERE request_ID = %s""", (request_id,))
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+
+    return jsonify({"message": "book succesfully checked out"}), 200
+
+
 @bp.route('/users', methods=['GET'])
 @verify_admin_authorization
 def get_all_users():

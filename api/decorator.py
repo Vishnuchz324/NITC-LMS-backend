@@ -25,6 +25,7 @@ def verify_token(f):
         token = request.headers.get("authorization")
         if not token:
             return jsonify({"message": "user not authenticated"}), 400
+        print(token)
         encoded_jwt = token.split()[1]
         try:
             user = jwt.decode(

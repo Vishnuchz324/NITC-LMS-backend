@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response
 
 from api.db import get_db
+from api.routes.book import get_book
 from api.decorator import verify_admin_authorization, verify_authorization, generate_token
 
 
@@ -19,6 +20,30 @@ def post_book_request():
 def update_user_info():
     # TODO
     pass
+
+
+@bp.route("/<id>/borrowed", methods=["GET"])
+@verify_authorization
+def view_borrowed(id):
+    db, cursor = get_db()
+    books = []
+    try:
+        cursor.execute(
+            "SELECT ISBN,renewed FROM borrowal WHERE user_ID = %s", (id,))
+    except Exception as e:
+        return jsonify({"message": error}), 400
+    for data in cursor.fetchall():
+        data = dict(data)
+        isbn = data["isbn"]
+        renewed = data["renewed"]
+        book, error = get_book(isbn)
+        if(not error):
+            book["renewed"] = renewed
+            del book['availability']
+            books.append(book)
+        else:
+            return jsonify({"message": str(error)}), 400
+    return jsonify({"data": books}), 200
 
 
 @bp.route("/<id>/borrow/<isbn>", methods=["GET"])

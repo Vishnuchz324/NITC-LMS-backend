@@ -14,7 +14,7 @@ def fine_user(user_ID):
     db, cursor = get_db()
     # the user is available in the request due to the decorator
     admin_ID = request.user["userID"]
-    # TODO
+    # T$ODO
 
 
 @bp.route("/add/<isbn>", methods=["GET"])
