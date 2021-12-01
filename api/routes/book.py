@@ -11,14 +11,14 @@ from api.decorator import (
 
 bp = Blueprint("book", __name__, url_prefix="/api/book")
 
-# ROUTES
-# [POST]  "/register"    register new book            -admin
-# [GET]   "/add/<isbn>"  add more copies of registerd book        -admin
-# [GET]   "/<isbn>"      get details of book with given idbn
-# [GET]   "/"            get details of all book
-# [GET]   "/search"      search for book by authors and tags
-# [GET]   "/authors"     get all authors that are registered
-# [GET]   "/tags"        get all tags that are registered
+# ROUTES ( base = "/api/book" )
+# [POST]  "/register"             register new book                         -admin
+# [POST]   "/add/<isbn>?nums=""   add more copies of registerd book         -admin
+# [GET]   "/<isbn>"               get details of book with given idbn
+# [GET]   "/"                     get details of all book
+# [GET]   "/search"               search for book by authors and tags
+# [GET]   "/authors"              get all authors that are registered
+# [GET]   "/tags"                 get all tags that are registered
 
 
 # register a new book
@@ -27,6 +27,15 @@ bp = Blueprint("book", __name__, url_prefix="/api/book")
 @bp.route("/register", methods=["POST"])
 @verify_admin_authorization
 def register_books():
+
+    # {
+    #     "ISBN": "",
+    #     "bookName": "",
+    #     "authors": [],
+    #     "tags": [],
+    #     "publisher": "",
+    # }
+
     db, cursor = get_db()
     body = request.json
     error = None
@@ -158,14 +167,21 @@ def register_books():
 
 # adding more copies of an existing book
 # route can only be accesed by librarian
-@bp.route("/add/<isbn>", methods=["GET"])
+# number of copies passed as query parameter
+@bp.route("/add/<isbn>", methods=["POST"])
 @verify_admin_authorization
 def add_book(isbn, nums=1):
     db, cursor = get_db()
+    # check if the request parameter have the number of books else only one copy added
     if request.args.get("nums"):
         nums = int(request.args.get("nums"))
+        # verify_admin_authorization verifies and adds the admin details to the request
+        # the admin who adds the book is obtained from the request
     admin = request.user["userID"]
     try:
+        # a loop is iterated num number times
+        # a new book entry of the particular isbn is inserted each time
+        # the status of the book by defaultt is "AVAILABLE"
         for i in range(nums):
             cursor.execute(
                 "INSERT INTO book(ISBN,admin_ID) VALUES(%s,%s)", (isbn, admin)
@@ -182,26 +198,38 @@ def get_book(isbn):
     book = None
     error = None
     try:
+        # select all details of book from book_details table referenced by isbn
         cursor.execute("SELECT * FROM book_details WHERE ISBN=%s", (isbn,))
         book = dict(cursor.fetchone())
+        # added empty array for authors and tags
         book["authors"] = []
         book["tags"] = []
+        # select all the tag_names useing join of the books_tags and tags tables
+        # reference via isbn
         cursor.execute(
             "SELECT tag_name FROM tags NATURAL JOIN books_tags WHERE ISBN=%s", (isbn,)
         )
+        # add all the tag_name as an array
         for tag in cursor.fetchall():
             book["tags"].append(tag[0])
+        # select all the author_names useing join of the book_authors and author tables
+        # reference via isbn
         cursor.execute(
             "SELECT author_name FROM author NATURAL JOIN books_authors WHERE ISBN=%s",
             (isbn,),
         )
+        # add all the author_name as an array
         for author in cursor.fetchall():
             book["authors"].append(author[0])
+        # get availability of book
+        # select availability of book grouped by status
         cursor.execute(
             "SELECT books.status,COUNT(*) FROM (SELECT * FROM book WHERE ISBN=%s) as books GROUP BY status",
             (isbn,),
         )
         availability = {}
+        # a lookup to rename the availability status from database
+        # availability can be AVAILABLE or BORROWED or BAD CONDITION
         lookup = {
             "AVAILABLE": "available",
             "BAD CONDITION": "bad_condition",
@@ -209,6 +237,7 @@ def get_book(isbn):
         }
         for [key, value] in cursor.fetchall():
             availability[lookup[key]] = value
+            # availability object is added to the book details
         book["availability"] = availability
     except Exception as e:
         error = e
@@ -219,6 +248,7 @@ def get_book(isbn):
 # the isbn of the book to be searched is given as route parameter <isbn>
 @bp.route("/<isbn>", methods=["GET"])
 def get_book_from_isbn(isbn):
+    # return the book with given isbn and error if any
     book, error = get_book(isbn)
     if error:
         return jsonify({"message": str(error)}), 400
@@ -231,10 +261,13 @@ def get_book_from_isbn(isbn):
 def get_all_books():
     db, cursor = get_db()
     try:
+        # fetch the isbn of all books from book details
         cursor.execute("SELECT ISBN FROM book_details")
         books = []
-        for isbn_list in cursor.fetchall():
-            isbn = isbn_list[0]
+        for data in cursor.fetchall():
+            isbn = dict(data)["isbn"]
+            # for each isbn get the details of the book
+            # if no error add the book details to an array
             book, error = get_book(isbn)
             if error is None:
                 books.append(dict(book))
@@ -249,8 +282,15 @@ def get_all_books():
 # books can be searched by tags and authors
 @bp.route("/search", methods=["GET"])
 def search_books():
+
+    # {
+    #     "authors": [],
+    #     "tags": [],
+    # }
+
     body = request.json
     required = ["authors", "tags"]
+    # verifies that the request body have authors and tags array
     for key in required:
         if key not in body.keys():
             return jsonify({"message": f"{key} is a required key"}), 400
@@ -259,10 +299,13 @@ def search_books():
     db, cursor = get_db()
     book_ids = []
     books = []
+    # if no author or tag matches empty array returned
     if len(authors) == 0 and len(tags) == 0:
         return jsonify({"data": books}), 200
+    # if both authors and tags given
     if len(authors) > 0 and len(tags) > 0:
         try:
+            # select all those books with the selected authors AND the selected tags
             cursor.execute(
                 """SELECT book_details.ISBN FROM book_details WHERE
                 book_details.ISBN IN (SELECT books_tags.ISBN FROM (books_tags NATURAL JOIN tags)
@@ -271,28 +314,32 @@ def search_books():
                 WHERE author.author_name IN %s)""",
                 (tags, authors),
             )
-            for isbn_list in cursor.fetchall():
-                isbn = isbn_list[0]
+            for data in cursor.fetchall():
+                isbn = dict(data)["isbn"]
                 if isbn not in book_ids:
                     book_ids.append(isbn)
         except Exception as e:
             return jsonify({"message": str(e)}), 400
+    # if just authors are given
     elif len(authors) > 0:
         try:
+            # select all those books written by any of the selected authors
             cursor.execute(
                 """SELECT book_details.ISBN FROM book_details WHERE
                 book_details.ISBN IN (SELECT books_authors.ISBN FROM (books_authors NATURAL JOIN author)
                 WHERE author.author_name IN %s)""",
                 (authors,),
             )
-            for isbn_list in cursor.fetchall():
-                isbn = isbn_list[0]
+            for data in cursor.fetchall():
+                isbn = dict(data)["isbn"]
                 if isbn not in book_ids:
                     book_ids.append(isbn)
         except Exception as e:
             return jsonify({"message": str(e)}), 400
+    # if just authors are given
     elif len(tags) > 0:
         try:
+            # select all those books that has the selected tags
             cursor.execute(
                 """SELECT book_details.ISBN FROM book_details WHERE
                 book_details.ISBN IN (SELECT books_tags.ISBN FROM (books_tags NATURAL JOIN tags)
@@ -300,8 +347,8 @@ def search_books():
                 (tags,),
             )
 
-            for isbn_list in cursor.fetchall():
-                isbn = isbn_list[0]
+            for data in cursor.fetchall():
+                isbn = dict(data)["isbn"]
                 if isbn not in book_ids:
                     book_ids.append(isbn)
         except Exception as e:
@@ -321,6 +368,7 @@ def get_authors():
     db, cursor = get_db()
     authors = []
     try:
+        # fetch all the author names from the author table
         cursor.execute("SELECT author_name FROM author")
         for author_list in cursor.fetchall():
             authors.append(author_list[0])
@@ -335,6 +383,7 @@ def get_tags():
     db, cursor = get_db()
     tags = []
     try:
+        # fetch all the tag names from the tags table
         cursor.execute("SELECT tag_name FROM tags")
         for tag_list in cursor.fetchall():
             tags.append(tag_list[0])

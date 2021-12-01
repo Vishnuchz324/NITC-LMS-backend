@@ -11,12 +11,12 @@ from api.decorator import (
 
 bp = Blueprint("user", __name__, url_prefix="/api/user")
 
-# ROUTES
-# [GET]    "/<id>"               get uset data
-# [PATCH]  "/<id>"               update uset data
-# [GET]    "/<id>/borrow?isbn="  put a borrow request
-# [GET]    "/<id>/borrowed"      view all borrowed books
-# [POST]   "/<id>/request"       request a new book
+# ROUTES ( base = "/api/user" )
+# [GET]    "/<id>"               get uset data              -user
+# [PATCH]  "/<id>"               update uset data           -user
+# [GET]    "/<id>/borrow?isbn="  put a borrow request       -user
+# [GET]    "/<id>/borrowed"      view all borrowed books    -user
+# [POST]   "/<id>/request"       request a new book         -user
 
 
 # get the user data
