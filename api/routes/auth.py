@@ -165,7 +165,7 @@ def login():
                 encoded_jwt = generate_token(user_id, isAdmin)
                 return (
                     jsonify(
-                        {"user_id": user_id, "admin": isAdmin, "token": encoded_jwt}
+                        {"userID": user_id, "isAdmin": isAdmin, "token": encoded_jwt}
                     ),
                     200,
                 )

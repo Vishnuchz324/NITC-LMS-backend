@@ -77,7 +77,7 @@ def update_user_info():
 # passed on <id> as a dynamic parameter and verified using jwt token
 @bp.route("/<id>/borrow", methods=["GET"])
 @verify_authorization
-def borrow_request(id, isbn):
+def borrow_request(id):
     db, cursor = get_db()
     error = None
     # checks if the isbn id of the book to be borrowed is given
@@ -114,17 +114,25 @@ def view_borrowed(id):
     books = []
     try:
         # fetch all those ISBN and number of times renewed belonging to the given userID
-        cursor.execute("SELECT ISBN,renewed FROM borrowal WHERE user_ID = %s", (id,))
+        cursor.execute(
+            "SELECT issue_id,ISBN,issue_date,renewed FROM borrowal WHERE user_ID = %s",
+            (id,),
+        )
     except Exception as e:
         return jsonify({"message": error}), 400
     # parsing the array of tyuples
     for data in cursor.fetchall():
         data = dict(data)
         isbn = data["isbn"]
+        issue_id = data["issue_id"]
+        issue_date = data["issue_date"]
         renewed = data["renewed"]
         # fetch the details of the book corresponding to given isbn
         book, error = get_book(isbn)
         if not error:
+            book["issueDate"] = issue_date
+            # add a new key to keep track of the issue ID
+            book["issueID"] = issue_id
             # add a new key renewed giving number of times the book was renewed
             book["renewed"] = renewed
             # deleting key values that needent beviewed by the clients

@@ -63,7 +63,7 @@ FOREIGN KEY(admin_ID) REFERENCES librarian(employee_ID));
 CREATE TABLE request(
 request_ID serial,
 user_ID CHAR(9),
-book_name VARCHAR(35),
+book_name TEXT,
 req_date timestamp default current_timestamp,
 PRIMARY KEY(request_ID),
 FOREIGN KEY(user_ID) REFERENCES members(user_ID)
@@ -71,14 +71,14 @@ FOREIGN KEY(user_ID) REFERENCES members(user_ID)
 
 CREATE TABLE book_details(
 ISBN CHAR(13),
-book_name VARCHAR(35),
+book_name TEXT,
 publisher VARCHAR(25),
 PRIMARY KEY(ISBN)
 );
 
 CREATE TABLE author(
 author_ID serial,
-author_name VARCHAR(25),
+author_name VARCHAR(50),
 PRIMARY KEY (author_ID)
 );
 
@@ -92,7 +92,7 @@ FOREIGN KEY (ISBN) REFERENCES book_details(ISBN)
 
 CREATE TABLE tags(
 tag_ID serial,
-tag_name VARCHAR(20),
+tag_name VARCHAR(50),
 PRIMARY KEY (tag_ID)
 );
 
