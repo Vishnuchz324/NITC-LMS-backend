@@ -17,7 +17,7 @@ bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 # [POST]   "/register"    get uset data       -user
 # [PATCH]  "/login"       update uset data    -user
 
-# register a new user
+
 @bp.route("/register", methods=["POST"])
 def register():
     body = request.json
@@ -88,12 +88,10 @@ def register():
                     programme = body["programme"].lower()
                     validity = body["validity"]
 
-                    # query to insert details into student table 
                     insert = {
                         "query": "INSERT INTO student(roll_No,validity,programme) VALUES (%s,%s,%s)",
                         "vars": (user_id, validity, programme),
                     }
-                    # query to fetch details of the student from the student table and member table
                     fetch = {
                         "query": "SELECT * FROM members mem,student stud WHERE mem.user_ID = stud.roll_no and mem.user_ID = %s AND mem.pwd = %s",
                         "vars": (user_id, hashed_password),
@@ -102,17 +100,15 @@ def register():
                 elif role == "staff":
                     tflag = True if ("true" or "True") else False
 
-                    # query to insert details of staff into the staff table
                     insert = {
                         "query": "INSERT INTO staff(employee_ID,Tflag) VALUES (%s,%s)",
                         "vars": (user_id, tflag),
                     }
-                    # query to fetch details of staff from the staff table and members table
                     fetch = {
                         "query": "SELECT * FROM members mem,staff stf WHERE mem.user_ID = stf.employee_ID and mem.user_ID = %s AND mem.pwd = %s",
                         "vars": (user_id, hashed_password),
                     }
-                # inserting user details into respective tables based on roles
+
                 try:
                     cursor.execute(insert["query"], insert["vars"])
                     db.commit()
@@ -133,7 +129,7 @@ def register():
 
     return jsonify({"message": f"{error}"}), 400
 
-# login
+
 @bp.route("/login", methods=["POST"])
 def login():
     body = request.json
@@ -153,11 +149,9 @@ def login():
     elif not password:
         error = "password is required"
     else:
-        # check if the user is registered as a member
         cursor.execute("SELECT * FROM members WHERE user_ID = %s", (user_id,))
         user = cursor.fetchone()
         if user is None:
-            # check if the user is registered as a librarian
             cursor.execute("SELECT * FROM librarian WHERE employee_ID = %s", (user_id,))
             user = cursor.fetchone()
             if user is None:
@@ -165,15 +159,13 @@ def login():
             else:
                 isAdmin = True
         if user is not None:
-            # check if the password entered is correct
             if not check_password_hash(user["pwd"], password):
                 error = "incorrect password"
             else:
-                # generate token for the user
                 encoded_jwt = generate_token(user_id, isAdmin)
                 return (
                     jsonify(
-                        {"userID": user_id, "isAdmin": isAdmin, "token": encoded_jwt}
+                        {"user_id": user_id, "admin": isAdmin, "token": encoded_jwt}
                     ),
                     200,
                 )

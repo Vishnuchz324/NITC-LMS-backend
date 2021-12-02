@@ -13,7 +13,7 @@ bp = Blueprint("book", __name__, url_prefix="/api/book")
 
 # ROUTES ( base = "/api/book" )
 # [POST]  "/register"             register new book                         -admin
-# [POST]  "/add/<isbn>?nums=""    add more copies of registerd book         -admin
+# [POST]   "/add/<isbn>?nums=""   add more copies of registerd book         -admin
 # [GET]   "/<isbn>"               get details of book with given idbn
 # [GET]   "/"                     get details of all book
 # [GET]   "/search"               search for book by authors and tags
