@@ -52,9 +52,9 @@ CREATE TABLE fine(
 fine_ID serial,
 user_ID CHAR(9),
 admin_ID CHAR(9),
-fine_status BOOLEAN,
+fine_status VARCHAR(15) DEFAULT 'PENDING',
 amount DECIMAL(8,2),
-payment_date DATE,
+payment_date  DATE DEFAULT current_date + interval '15 days',
 PRIMARY KEY(fine_ID),
 FOREIGN KEY(user_ID) REFERENCES members(user_ID),
 FOREIGN KEY(admin_ID) REFERENCES librarian(employee_ID));
@@ -64,21 +64,22 @@ CREATE TABLE request(
 request_ID serial,
 user_ID CHAR(9),
 book_name VARCHAR(35),
-req_date timestamp default current_timestamp,
+req_date DATE default current_date,
+req_type VARCHAR(10),
 PRIMARY KEY(request_ID),
 FOREIGN KEY(user_ID) REFERENCES members(user_ID)
 );
 
 CREATE TABLE book_details(
 ISBN CHAR(13),
-book_name VARCHAR(35),
-publisher VARCHAR(25),
+book_name TEXT,
+publisher VARCHAR(30),
 PRIMARY KEY(ISBN)
 );
 
 CREATE TABLE author(
 author_ID serial,
-author_name VARCHAR(25),
+author_name VARCHAR(35),
 PRIMARY KEY (author_ID)
 );
 
@@ -92,7 +93,7 @@ FOREIGN KEY (ISBN) REFERENCES book_details(ISBN)
 
 CREATE TABLE tags(
 tag_ID serial,
-tag_name VARCHAR(20),
+tag_name VARCHAR(35),
 PRIMARY KEY (tag_ID)
 );
 
@@ -111,7 +112,7 @@ book_number serial,
 ISBN CHAR(13),
 status VARCHAR(20) DEFAULT 'AVAILABLE',
 admin_ID CHAR(9),
-arrival_date timestamp DEFAULT current_timestamp,
+arrival_date DATE DEFAULT current_date,
 PRIMARY KEY (book_number),
 FOREIGN KEY (ISBN) REFERENCES book_details(ISBN),
 FOREIGN KEY(admin_ID) REFERENCES librarian(employee_ID)
@@ -121,7 +122,8 @@ CREATE TABLE borrowal_request(
     request_ID serial,
     user_ID CHAR(9),
     ISBN CHAR(13),
-    req_date timestamp DEFAULT current_timestamp,
+    req_date DATE DEFAULT current_date,
+    status VARCHAR(20) DEFAULT 'PROCESSING',
     PRIMARY KEY(request_ID),
     FOREIGN KEY(user_ID) REFERENCES members(user_ID),
     FOREIGN KEY (ISBN) REFERENCES book_details(ISBN)
@@ -134,7 +136,8 @@ admin_ID CHAR(9),
 ISBN CHAR(13),
 book_number INTEGER,
 renewed INTEGER,
-issue_date timestamp DEFAULT current_timestamp,
+issue_date DATE DEFAULT current_date,
+return_date DATE DEFAULT current_date + interval '30 days',
 PRIMARY KEY(issue_ID),
 FOREIGN KEY(user_ID) REFERENCES members(user_ID),
 FOREIGN KEY(admin_ID) REFERENCES librarian(employee_ID),

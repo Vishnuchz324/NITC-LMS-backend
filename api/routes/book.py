@@ -50,8 +50,15 @@ def register_books():
         publisher_name = (body["publisher"],)
         author_names = body["authors"]
         tag_names = body["tags"]
+
         # insert the data the book_request table and return the recently inserted
         try:
+            cursor.execute(
+                "SELECT * FROM book_details WHERE book_name=%s OR ISBN=%s ;",
+                (ISBN, book_name, publisher_name),
+            )
+            if cursor.fetchone() is not None:
+                return jsonify({"messaage": "the book already registered"}), 400
             cursor.execute(
                 "INSERT INTO book_details VALUES(%s,%s,%s) RETURNING *;",
                 (ISBN, book_name, publisher_name),
@@ -171,6 +178,7 @@ def register_books():
 @bp.route("/add/<isbn>", methods=["POST"])
 @verify_admin_authorization
 def add_book(isbn, nums=1):
+    print("entered here")
     db, cursor = get_db()
     # check if the request parameter have the number of books else only one copy added
     if request.args.get("nums"):
@@ -182,10 +190,14 @@ def add_book(isbn, nums=1):
         # a loop is iterated num number times
         # a new book entry of the particular isbn is inserted each time
         # the status of the book by defaultt is "AVAILABLE"
-        for i in range(nums):
-            cursor.execute(
-                "INSERT INTO book(ISBN,admin_ID) VALUES(%s,%s)", (isbn, admin)
-            )
+        try:
+            print(f"adding {nums} copy of {isbn}")
+            for i in range(nums):
+                cursor.execute(
+                    "INSERT INTO book(ISBN,admin_ID) VALUES(%s,%s)", (isbn, admin)
+                )
+        except Exception as e:
+            print(str(e))
         return jsonify({"message": f"{nums} number of books added"}), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 400
@@ -260,20 +272,63 @@ def get_book_from_isbn(isbn):
 @bp.route("/", methods=["GET"])
 def get_all_books():
     db, cursor = get_db()
+    user = request.args.get("userID")
+    if user is None:
+        try:
+            # fetch the isbn of all books from book details
+            cursor.execute("SELECT ISBN FROM book_details")
+            books = []
+            for data in cursor.fetchall():
+                isbn = dict(data)["isbn"]
+                # for each isbn get the details of the book
+                # if no error add the book details to an array
+                book, error = get_book(isbn)
+                if error is None:
+                    books.append(dict(book))
+                else:
+                    raise Exception(error)
+            return jsonify({"data": books}), 200
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+    else:
+        try:
+            # fetch the isbn of all books from book details
+            cursor.execute(
+                """SELECT ISBN FROM book_details
+                            WHERE ISBN NOT IN
+                            (SELECT ISBN FROM borrowal_request WHERE user_ID=%s)
+                            AND ISBN NOT IN
+                            (SELECT  ISBN FROM borrowal WHERE user_ID=%s)""",
+                (
+                    user,
+                    user,
+                ),
+            )
+            books = []
+            for data in cursor.fetchall():
+                isbn = dict(data)["isbn"]
+                # for each isbn get the details of the book
+                # if no error add the book details to an array
+                book, error = get_book(isbn)
+                if error is None:
+                    books.append(dict(book))
+                else:
+                    raise Exception(error)
+            return jsonify({"data": books}), 200
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+
+
+@bp.route("/all", methods=["GET"])
+@verify_admin_authorization
+def all_books():
+    db, cursor = get_db()
+    books = []
     try:
-        # fetch the isbn of all books from book details
-        cursor.execute("SELECT ISBN FROM book_details")
-        books = []
+        cursor.execute("SELECT * FROM book")
         for data in cursor.fetchall():
-            isbn = dict(data)["isbn"]
-            # for each isbn get the details of the book
-            # if no error add the book details to an array
-            book, error = get_book(isbn)
-            if error is None:
-                books.append(dict(book))
-            else:
-                raise Exception(error)
-        return jsonify({"data": books}), 200
+            books.append(dict(data))
+        return jsonify({"books": books}), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 

@@ -75,7 +75,7 @@ def update_user_info():
 
 # make a borrow request for a book
 # passed on <id> as a dynamic parameter and verified using jwt token
-@bp.route("/<id>/borrow", methods=["GET"])
+@bp.route("/<id>/borrow", methods=["POST"])
 @verify_authorization
 def borrow_request(id):
     db, cursor = get_db()
@@ -103,6 +103,25 @@ def borrow_request(id):
         except Exception as e:
             error = str(e)
     return jsonify({"message": error}), 400
+
+
+# make a borrow request for a book
+# passed on <id> as a dynamic parameter and verified using jwt token
+@bp.route("/<id>/borrow", methods=["GET"])
+@verify_authorization
+def get_all_borrow_requests(id):
+    db, cursor = get_db()
+    try:
+        cursor.execute(
+            """SELECT br.*,bd.book_name FROM borrowal_request br,book_details bd WHERE br.ISBN=bd.ISBN AND user_ID = %s""",
+            (id,),
+        )
+    except Exception as e:
+        jsonify({"message": str(e)}), 400
+    requests = []
+    for data in cursor.fetchall():
+        requests.append(dict(data))
+    return jsonify({"requests": requests}), 200
 
 
 # view all books borrowed by the user
@@ -143,13 +162,19 @@ def view_borrowed(id):
 def post_book_request(id):
     db, cursor = get_db()
     body = request.json
-    required = ["bookName"]
+    required = ["bookName", "type"]
     # checks if the rquest body contains the name of book to be requested
     for key in required:
         if key not in body.keys():
             return jsonify({"message": "book name is required"}), 400
     book_name = body["bookName"]
+    req_type = body["type"]
     try:
+        # verifies that the book requested is not already registed
+        cursor.execute("SELECT * FROM request WHERE book_name = %s", (book_name,))
+        # if book already registeed error is raised
+        if cursor.fetchone():
+            return jsonify({"message": "book already requested"}), 400
         # verifies that the book requested is not already registed
         cursor.execute("SELECT * FROM book_details WHERE book_name = %s", (book_name,))
         # if book already registeed error is raised
@@ -160,12 +185,10 @@ def post_book_request(id):
     try:
         # if the request is for a new book
         # insert the instance to the request table for admin to view
+        req_type = "REQUEST" if req_type == "request" else "DONATE"
         cursor.execute(
-            "INSERT INTO request(user_ID,book_name) VALUES(%s,%s)",
-            (
-                id,
-                book_name,
-            ),
+            "INSERT INTO request(user_ID,book_name,req_type) VALUES(%s,%s,%s)",
+            (id, book_name, req_type),
         )
         return jsonify({"message": "book request submitted"}), 200
     except Exception as e:
