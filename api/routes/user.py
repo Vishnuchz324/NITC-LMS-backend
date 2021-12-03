@@ -145,7 +145,7 @@ def view_borrowed(id):
         # fetch all those ISBN and number of times renewed belonging to the given userID
         cursor.execute("SELECT * FROM borrowal WHERE user_ID = %s", (id,))
     except Exception as e:
-        return jsonify({"message": error}), 400
+        return jsonify({"message": e}), 400
     # parsing the array of tyuples
     for data in cursor.fetchall():
         data = dict(data)
