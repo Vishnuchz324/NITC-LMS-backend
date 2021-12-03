@@ -145,7 +145,7 @@ def view_borrowed(id):
         # fetch all those ISBN and number of times renewed belonging to the given userID
         cursor.execute("SELECT * FROM borrowal WHERE user_ID = %s", (id,))
     except Exception as e:
-        return jsonify({"message": e}), 400
+        return jsonify({"message": error}), 400
     # parsing the array of tyuples
     for data in cursor.fetchall():
         data = dict(data)
@@ -167,6 +167,21 @@ def view_borrowed(id):
         else:
             return jsonify({"message": str(error)}), 400
     return jsonify({"data": books}), 200
+
+
+@bp.route("/<id>/dues", methods=["GET"])
+def get_dues(id):
+    db, cursor = get_db()
+    try:
+        cursor.execute(
+            "SELECT * FROM fine WHERE user_ID=%s AND fine_status=%s", (id, "PENDING")
+        )
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+    fines = []
+    for fine in cursor.fetchall():
+        fines.append(dict(fine))
+    return jsonify({"fines": fines}), 200
 
 
 # make a request for a addition of a new book
