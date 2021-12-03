@@ -44,6 +44,7 @@ def register_books():
     for key in required:
         if key not in body.keys():
             error = f"{key} is required"
+    print(dict(body))
     if error is None:
         ISBN = (body["ISBN"],)
         book_name = (body["bookName"],)
@@ -55,10 +56,10 @@ def register_books():
         try:
             cursor.execute(
                 "SELECT * FROM book_details WHERE book_name=%s OR ISBN=%s ;",
-                (ISBN, book_name, publisher_name),
+                (book_name, ISBN),
             )
             if cursor.fetchone() is not None:
-                return jsonify({"messaage": "the book already registered"}), 400
+                return jsonify({"message": "the book already registered"}), 400
             cursor.execute(
                 "INSERT INTO book_details VALUES(%s,%s,%s) RETURNING *;",
                 (ISBN, book_name, publisher_name),
@@ -186,6 +187,9 @@ def add_book(isbn, nums=1):
         # verify_admin_authorization verifies and adds the admin details to the request
         # the admin who adds the book is obtained from the request
     admin = request.user["userID"]
+    cursor.execute("SELECT * FROM book_details WHERE ISBN=%s", (isbn,))
+    if cursor.fetchone() is None:
+        return jsonify({"message": "book not registered"}), 400
     try:
         # a loop is iterated num number times
         # a new book entry of the particular isbn is inserted each time
