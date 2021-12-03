@@ -31,8 +31,7 @@ def validate_register_user(body):
 
     db, cursor = get_db()
 
-    required = ['userID', 'userName', 'password',
-                'email', 'phoneNo', 'role']
+    required = ["userID", "userName", "password", "email", "phoneNo", "role"]
 
     # validate if required fields are present
     for key in required:
@@ -40,24 +39,24 @@ def validate_register_user(body):
             return f"{key} is required"
 
     # # verify if userID is valid and that it have not registered before
-    user_id = body['userID']
+    user_id = body["userID"]
     if len(user_id) != 9:
         return f"user id is not a valid"
 
     # # verify if email is valid and that it have not registered before
-    email = body['email']
-    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    if(not re.fullmatch(regex, email)):
+    email = body["email"]
+    regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
+    if not re.fullmatch(regex, email):
         return f"email is not a valid"
 
     # # verify if phoneNo is valid and that it have not registered before
-    phoneNo = body['phoneNo']
+    phoneNo = body["phoneNo"]
     if len(phoneNo) < 10 or len(phoneNo) > 12:
-        return f"constact is not a valid"
+        return f"contact is not a valid"
 
     # verify if role is allowed
-    roles = ['student', 'staff', 'librarian']
-    role = body['role']
+    roles = ["student", "staff", "librarian"]
+    role = body["role"]
     if role not in roles:
         return f"{body['role']} is not a valid role"
 
@@ -89,7 +88,7 @@ def validate_register_user(body):
             if not tflag:
                 return f"teacher flag is required for staff"
             else:
-                tflag = True if("true" or "True") else False
+                tflag = True if ("true" or "True") else False
                 if tflag not in [True, False]:
                     return f"teacher flag is not valid"
 
