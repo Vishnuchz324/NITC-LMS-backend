@@ -25,12 +25,22 @@ bp = Blueprint("user", __name__, url_prefix="/api/user")
 @verify_authorization
 def get_user(id):
     db, cursor = get_db()
+    role = request.args.get("role")
+    if role == "admin":
+        try:
+            cursor.execute("SELECT * FROM librarian WHERE employee_ID = %s", (id,))
+            user = dict(cursor.fetchone())
+            user["user_id"] = user["employee_id"]
+            user["mem_name"] = user["lib_name"]
+            user["role"] = "librarian"
+        except Exception as e:
+            return jsonify({"message": str(e)}), 400
+        return jsonify({"user": user}), 200
     error = None
     # fetch the user data from the members table if exists
     cursor.execute("SELECT * FROM members WHERE user_ID = %s", (id,))
     user = dict(cursor.fetchone())
     # deleting unwanted keys that neednt be shared with the client
-    del user["user_id"]
     del user["pwd"]
     # raise an error if there is no entry for the particular userID
     if user is None:
@@ -133,19 +143,23 @@ def view_borrowed(id):
     books = []
     try:
         # fetch all those ISBN and number of times renewed belonging to the given userID
-        cursor.execute("SELECT ISBN,renewed FROM borrowal WHERE user_ID = %s", (id,))
+        cursor.execute("SELECT * FROM borrowal WHERE user_ID = %s", (id,))
     except Exception as e:
         return jsonify({"message": e}), 400
     # parsing the array of tyuples
     for data in cursor.fetchall():
         data = dict(data)
         isbn = data["isbn"]
+        issue_date = data["issue_date"]
+        return_date = data["return_date"]
         renewed = data["renewed"]
         # fetch the details of the book corresponding to given isbn
         book, error = get_book(isbn)
         if not error:
             # add a new key renewed giving number of times the book was renewed
             book["renewed"] = renewed
+            book["issue_date"] = issue_date
+            book["return_date"] = return_date
             # deleting key values that needent beviewed by the clients
             del book["availability"]
             # collecting all the book details as an array of objects
