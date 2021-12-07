@@ -44,6 +44,7 @@ def get_borrow_requests():
         requests.append(request)
     return jsonify({"requests": requests}), 200
 
+
 # fetch all requests
 @bp.route("/requests", methods=["GET"])
 @verify_admin_authorization
@@ -62,6 +63,7 @@ def all_requests():
         request = dict(data)
         requests.append(request)
     return jsonify({"requests": requests}), 200
+
 
 # fetch all the borrow requests that are checked out but not checked back in
 @bp.route("/borrowals", methods=["GET"])
@@ -193,6 +195,7 @@ def checkout(request_id):
 
     return jsonify({"message": "book succesfully checked out"}), 200
 
+
 # checkin a book by the librarian
 # borrowal_id is passed as parameter for checking in a particular book
 @bp.route("/checkin/<borrowal_id>", methods=["GET"])
@@ -220,7 +223,8 @@ def checkin(borrowal_id):
             )
         except Exception as e:
             return jsonify({"message": str(e)}), 400
-    return jsonify({"message": "book has been sucvesfully checked in "}), 200
+    return jsonify({"message": "book has been succesfully checked in "}), 200
+
 
 # fine a user by the librarian
 @bp.route("/fine", methods=["POST"])
@@ -250,6 +254,7 @@ def fine_user():
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 
+
 # view all the pending fines
 @bp.route("/fine/view", methods=["GET"])
 @verify_admin_authorization
@@ -268,6 +273,7 @@ def view_fines():
         return jsonify({"fines": fines}), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 400
+
 
 # close a fine by the admin
 @bp.route("/fine/close/<fine_id>", methods=["GET"])
@@ -288,6 +294,7 @@ def close_fines(fine_id):
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 
+
 # fetch the details of all users registed in the system
 @bp.route("/users", methods=["GET"])
 @verify_admin_authorization
@@ -303,6 +310,7 @@ def get_all_users():
         return jsonify(users), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 400
+
 
 # fetch the details of all librarians registed in the system
 @bp.route("/admins", methods=["GET"])

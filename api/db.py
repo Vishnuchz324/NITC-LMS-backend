@@ -16,10 +16,10 @@ def init_app(app):
 # initialize the database with the schema given in sql/schema.sql file
 def init_db():
     db, cur = get_db()
-    schema_path = os.path.join(os.getcwd(), 'sql/schema.sql')
+    schema_path = os.path.join(os.getcwd(), "sql/schema.sql")
     with current_app.open_resource(schema_path) as f:
-        cur.execute(f.read().decode('utf8'))
-    return cur.fetchone()['version']
+        cur.execute(f.read().decode("utf8"))
+    return cur.fetchone()["version"]
 
 
 @click.command("init-db")
@@ -32,9 +32,11 @@ def init_db_command():
 
 def get_db():
     if "db" not in g:
-        enviornment = environ.get('ENV')
-        # DB_URL = environ.get('DATABASE_URL')
-        DB_URL = environ.get('DATABASE_URL_DEV')
+        enviornment = environ.get("FLASK_ENV")
+        if enviornment == "production":
+            DB_URL = environ.get("DATABASE_URL")
+        else:
+            DB_URL = environ.get("DATABASE_URL_DEV")
         g.db = psycopg2.connect(DB_URL)
         g.db.autocommit = True
         g.cursor = g.db.cursor(cursor_factory=extras.DictCursor)

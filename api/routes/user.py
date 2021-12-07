@@ -74,15 +74,6 @@ def get_user(id):
     return jsonify({"message": error}), 400
 
 
-# TODO
-# update the user data
-# passed on <id> as a dynamic parameter and verified using jwt token
-@bp.route("/<id>", methods=["PATCH"])
-@verify_authorization
-def update_user_info():
-    return "hello"
-
-
 # make a borrow request for a book
 # passed on <id> as a dynamic parameter and verified using jwt token
 @bp.route("/<id>/borrow", methods=["POST"])
